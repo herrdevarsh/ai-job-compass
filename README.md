@@ -215,6 +215,9 @@ Overview of roles by skill fit, AI risk, and demand.
 ![Main screen](docs/screen_main3.PNG)
 ![Main screen](docs/screen_main4.PNG)
 
+CV / text-based skill extraction
+The app can take a short CV snippet or skill summary as free text and automatically detect known skills (e.g. “Python”, “SQL”, “Pandas”, “AWS”, “Docker”, “Power BI”). A simple lexicon-based extractor normalizes the text, matches single- and multi-word skill variants, and pre-selects the detected skills in the UI. This makes the tool feel closer to a real product flow (paste your CV → get structured skills → get role recommendations and a learning plan) instead of forcing users to tick skills manually from scratch.
+![Main screen](docs/screen_main5.PNG)
 
 7. Testing
 

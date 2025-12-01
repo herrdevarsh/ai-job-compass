@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 from ai_job_compass.engine import JobCompassEngine, UserProfile
+from ai_job_compass.skill_extractor import extract_skills_from_text
 
 
 st.set_page_config(
@@ -9,6 +10,21 @@ st.set_page_config(
     page_icon="🧭",
     layout="wide",
 )
+
+
+ROLE_DESCRIPTIONS = {
+    "Backend Developer": "Builds and maintains server-side logic, APIs, and data access layers.",
+    "Frontend Developer": "Implements the user-facing side of web apps using modern JS frameworks.",
+    "Full-Stack Developer": "Works across frontend and backend to deliver end-to-end features.",
+    "Data Analyst": "Explores data, builds dashboards, and helps stakeholders answer business questions.",
+    "BI Engineer": "Designs data models and BI reports for consistent business metrics.",
+    "Data Engineer": "Builds and maintains data pipelines, storage, and processing infrastructure.",
+    "ML Engineer": "Turns ML models into reliable, production-ready services and pipelines.",
+    "MLOps Engineer": "Owns the ML lifecycle: deployment, monitoring, pipelines, and infrastructure.",
+    "Product Analyst": "Analyses product and user data to support experiments and roadmap decisions.",
+    "QA Automation Engineer": "Builds automated tests and frameworks to keep releases stable.",
+    "Cloud Engineer": "Designs and operates cloud infrastructure for applications and data workloads.",
+}
 
 
 @st.cache_resource
@@ -22,15 +38,34 @@ def main():
 
     # ---- Header ----
     st.title("AI Job Transition Compass")
-    st.write("Pick your current skills. Get a realistic target role, a focused learning plan, and project ideas.")
+    st.write("Pick your current skills (or paste your CV). Get a realistic target role, a focused learning plan, and project ideas.")
     st.markdown("---")
 
     # ---- Sidebar: user inputs ----
     st.sidebar.header("Your profile")
 
+    # Optional CV / summary text
+    cv_text = st.sidebar.text_area(
+        "Optional: paste your CV / skill summary",
+        placeholder="Paste a short profile, CV snippet, or list of tools you know...",
+        height=140,
+    )
+
+    detected_skill_ids = set()
+    detected_skill_names = []
+
+    if st.sidebar.button("Detect skills from text"):
+        detected_skill_ids = extract_skills_from_text(cv_text, skills_df)
+        if detected_skill_ids:
+            detected_skill_names = [skills_df.loc[sid, "name"] for sid in detected_skill_ids]
+            st.sidebar.success("Detected skills: " + ", ".join(detected_skill_names))
+        else:
+            st.sidebar.info("No known skills detected. Try adding more concrete tool/tech names.")
+
     selected_skill_ids = st.sidebar.multiselect(
-        "Current skills",
+        "Current skills (confirm / adjust)",
         options=list(skills_df.index),
+        default=list(detected_skill_ids) if detected_skill_ids else None,
         format_func=lambda sid: skills_df.loc[sid, "name"],
     )
 
@@ -51,7 +86,7 @@ def main():
     )
 
     if not selected_skill_ids:
-        st.info("Select at least one skill in the sidebar to see recommendations.")
+        st.info("Select at least one skill in the sidebar (or detect from text) to see recommendations.")
         return
 
     profile = UserProfile(skill_ids=selected_skill_ids, weekly_hours=weekly_hours)
@@ -64,7 +99,7 @@ def main():
     # Limit to relevant top roles for interaction
     top_scores = scores.head(max_roles).copy()
 
-    # ---- Choose target role (no visuals here) ----
+    # ---- Choose target role ----
     role_ids = list(top_scores.index)
     role_names = [top_scores.loc[rid, "name"] for rid in role_ids]
 
@@ -88,6 +123,13 @@ def main():
         c4.metric("Avg. salary (est.)", f"{selected_row['avg_salary']:.0f}")
     else:
         c4.metric("Avg. salary (est.)", "N/A")
+
+    # Short natural-language description
+    role_desc = ROLE_DESCRIPTIONS.get(
+        selected_row["name"],
+        "Tech role that combines your current skills with some targeted upskilling.",
+    )
+    st.caption(role_desc)
 
     st.caption(
         f"You match this role with a skill fit of {selected_row['similarity']:.2f}, "
@@ -176,7 +218,7 @@ def main():
         use_container_width=True,
     )
 
-    # ---- Visual (not at top, not a bar graph): scatter plot ----
+    # ---- Visual (still simple, at bottom) ----
     st.markdown("### Role landscape (visual)")
 
     scatter_df = scores[["name", "similarity", "ai_risk_score", "demand_count"]].copy()
@@ -193,7 +235,6 @@ def main():
         "Each point is a role. X-axis = skill fit, Y-axis = AI risk, bubble size ≈ demand."
     )
 
-    # Streamlit scatter chart (not a bar graph, and at the bottom)
     st.scatter_chart(
         scatter_df,
         x="Skill fit",
