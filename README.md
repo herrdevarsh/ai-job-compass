@@ -89,7 +89,7 @@ For a given user:
 
 4. For each role, compute:
 
-```text
+text
 score(role) = α * similarity(user, role)
               + β * demand_norm(role)
               - γ * ai_risk_norm(role)
@@ -208,7 +208,7 @@ Phase-based learning steps and concrete project ideas.
 
 [Main screen](docs/screen_main2.PNG)
 
-### Role landscape (optional)
+ Role landscape (optional)
 
 Overview of roles by skill fit, AI risk, and demand.
 
